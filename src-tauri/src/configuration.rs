@@ -14,6 +14,7 @@ struct PatternConfig {
     color: String,
 }
 
+#[derive(Clone)]
 pub struct CompiledPattern {
     pub name: String,
     pub regex: Regex,
