@@ -1,0 +1,55 @@
+.pill {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  font-weight: 500;
+  padding: 6px 14px;
+  border-radius: 999px;
+  background: var(--input-bg);
+  border: 1px solid var(--panel-border);
+}
+
+.pillHeart {
+  width: 15px;
+  height: 15px;
+}
+
+.pillIdle .pillHeart {
+  color: var(--text-dim);
+}
+
+.pillRunning .pillHeart {
+  color: var(--accent);
+  animation: heartbeat 1.1s ease-in-out infinite;
+}
+
+.pillDone .pillHeart {
+  color: var(--success);
+}
+
+.pillError .pillHeart {
+  color: var(--danger);
+}
+
+@keyframes heartbeat {
+  0%,
+  100% {
+    transform: scale(1);
+  }
+  25% {
+    transform: scale(1.22);
+  }
+  40% {
+    transform: scale(1);
+  }
+  60% {
+    transform: scale(1.16);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pillRunning .pillHeart {
+    animation: none;
+  }
+}

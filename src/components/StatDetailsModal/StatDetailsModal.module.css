@@ -1,0 +1,122 @@
+.modalBackdrop {
+  position: fixed;
+  inset: 0;
+  background-color: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 20px;
+}
+
+[data-theme="kitty"] .modalBackdrop {
+  background-color: rgba(120, 30, 70, 0.32);
+}
+
+.modalCard {
+  background: var(--modal-bg);
+  border: 1px solid var(--panel-border);
+  border-radius: var(--radius-md);
+  width: 100%;
+  max-width: 550px;
+  max-height: 80vh;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 16px 32px var(--shadow-color);
+  overflow: hidden;
+}
+
+.modalHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--panel-border);
+  background: var(--subtle-bg);
+}
+
+.modalHeader h2 {
+  font-size: 1.1rem;
+  margin: 0;
+  color: var(--text);
+}
+
+.modalSubtitle {
+  font-size: 0.82rem;
+  color: var(--text-dim);
+  margin: 4px 0 0 0;
+}
+
+.highlight {
+  color: var(--accent);
+  font-weight: 600;
+}
+
+.modalCloseBtn {
+  background: transparent;
+  border: none;
+  color: var(--text-dim);
+  font-size: 1.15rem;
+  cursor: pointer;
+  padding: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 6px;
+  transition: background 0.15s ease;
+}
+
+.modalCloseBtn:hover {
+  background: var(--badge-bg);
+  color: var(--danger);
+}
+
+.modalBody {
+  padding: 16px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  overflow: hidden;
+  flex: 1;
+}
+
+.modalSearch {
+  width: 100%;
+  max-width: none;
+}
+
+.modalValuesList {
+  overflow-y: auto;
+  max-height: 50vh;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding-right: 4px;
+}
+
+.modalValueItem {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 12px;
+  background: var(--input-bg);
+  border-radius: 6px;
+  border: 1px solid var(--panel-border);
+}
+
+.modalValText {
+  font-family: var(--font-mono);
+  font-size: 0.9rem;
+  color: var(--accent);
+  word-break: break-all;
+}
+
+.modalValBadge {
+  font-size: 0.75rem;
+  background: var(--badge-bg);
+  color: var(--text-dim);
+  padding: 2px 8px;
+  border-radius: 12px;
+  white-space: nowrap;
+}

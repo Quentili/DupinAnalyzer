@@ -1,12 +1,14 @@
 use std::sync::Mutex;
 
 use crate::{
-    analyzer::{analys, open_log_at_line, selected_path},
+    analyzer::{analys, research, selected_path},
     configuration::{load_configuration, CompiledPattern},
+    viewer::open_log_at_line,
 };
 
 mod analyzer;
 mod configuration;
+mod viewer;
 
 #[derive(Default)]
 struct AppState {
@@ -25,7 +27,7 @@ pub fn run() {
             selected_path,
             load_configuration,
             open_log_at_line,
-            // research
+            research
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

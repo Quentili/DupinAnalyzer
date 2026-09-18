@@ -1,0 +1,45 @@
+.pathRow {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 14px 20px;
+}
+
+.pathRow + .pathRow {
+  border-top: 1px solid var(--panel-border);
+}
+
+.pathRowLabel {
+  font-size: 13px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-dim);
+  width: 130px;
+  flex-shrink: 0;
+}
+
+.pathRowValue {
+  flex: 1;
+  font-family: var(--font-mono);
+  font-size: 14px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  background: var(--input-bg);
+  padding: 8px 12px;
+  border-radius: 6px;
+  border: 1px solid transparent;
+}
+
+.isFilled {
+  border-color: var(--panel-border);
+  color: var(--text);
+}
+
+.pathRowValueEmpty {
+  color: var(--text-dim);
+  font-family: inherit;
+  font-style: italic;
+  background: transparent;
+}

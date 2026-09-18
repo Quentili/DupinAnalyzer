@@ -1,0 +1,68 @@
+.tableWrapper {
+  width: 100%;
+  flex: 1;
+  overflow-x: auto;
+  overflow-y: auto;
+  min-height: 0;
+}
+
+.catTable {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  font-family: var(--font-mono);
+  font-size: 12px;
+}
+
+.catTable th {
+  text-align: left;
+  padding: 10px 16px;
+  color: var(--text-dim);
+  font-weight: 600;
+  font-size: 11px;
+  letter-spacing: 0.05em;
+  background: var(--table-header-bg);
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  border-bottom: 1px solid var(--panel-border);
+}
+
+[data-theme="kitty"] .catTable th {
+  color: #b03a70;
+}
+
+.catTable td {
+  padding: 8px 16px;
+  border-bottom: 1px solid var(--panel-border);
+  white-space: nowrap;
+}
+
+.rowHover {
+  transition:
+    filter 0.15s ease,
+    background-color 0.15s ease;
+}
+
+.rowHover:hover {
+  filter: brightness(1.15);
+}
+
+[data-theme="kitty"] .rowHover:hover {
+  filter: none;
+  background-color: rgba(255, 79, 158, 0.16) !important;
+}
+
+.clickableRow {
+  cursor: pointer;
+}
+
+.clickableRow:hover {
+  outline: 1px solid var(--accent);
+}
+
+.catFileId {
+  color: var(--accent);
+  font-weight: 600;
+  font-size: 11px;
+}
