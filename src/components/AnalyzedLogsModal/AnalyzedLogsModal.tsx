@@ -7,12 +7,15 @@ import { AdaptiveSearchIcon } from "../Icons/Icons";
 
 type AnalyzedLogsModalProps = {
     tables: Record<string, CategoryTable>;
+    telegramId: string;
     onClose: () => void;
 };
 
-export function AnalyzedLogsModal({ tables, onClose }: AnalyzedLogsModalProps) {
+export function AnalyzedLogsModal({ tables, telegramId, onClose }: AnalyzedLogsModalProps) {
     const [selectedLogs, setSelectedLogs] = useState<string[]>([]);
     const [searchQuery, setSearchQuery] = useState("");
+
+    const hasTelegramId = telegramId.trim().length > 0;
 
     const uniqueLogs = useMemo(() => {
         const logSet = new Set<string>();
@@ -54,9 +57,10 @@ export function AnalyzedLogsModal({ tables, onClose }: AnalyzedLogsModalProps) {
     const handleGet = async (fileName?: string) => {
         const targets = fileName ? [fileName] : selectedLogs;
         if (targets.length === 0) return;
+        if (!hasTelegramId) return;
 
         try {
-            await invoke("get_analyzed_logs", { logs: targets });
+            await invoke("get_analyzed_logs", { logs: targets, telegramId });
         } catch (error) {
         }
     };
@@ -71,6 +75,12 @@ export function AnalyzedLogsModal({ tables, onClose }: AnalyzedLogsModalProps) {
                     </h3>
                     <button className={styles.closeBtn} onClick={onClose}>&times;</button>
                 </div>
+
+                {!hasTelegramId && (
+                    <div className="banner banner--error" style={{ margin: "0 0 12px" }}>
+                        Set a Telegram ID on the Control Panel to enable GET.
+                    </div>
+                )}
 
                 <div className={styles.actions}>
                     <button type="button" className="btn btn--secondary btn--small" onClick={handleToggleAll}>
@@ -101,7 +111,7 @@ export function AnalyzedLogsModal({ tables, onClose }: AnalyzedLogsModalProps) {
                     <button
                         type="button"
                         className="btn btn--primary btn--small"
-                        disabled={selectedLogs.length === 0}
+                        disabled={selectedLogs.length === 0 || !hasTelegramId}
                         onClick={() => handleGet()}
                     >
                         GET SELECTED ({selectedLogs.length})
@@ -131,6 +141,7 @@ export function AnalyzedLogsModal({ tables, onClose }: AnalyzedLogsModalProps) {
                                 <button
                                     type="button"
                                     className="btn btn--secondary btn--small"
+                                    disabled={!hasTelegramId}
                                     onClick={(e) => {
                                         e.stopPropagation();
                                         handleGet(fileName);

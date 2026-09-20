@@ -1,6 +1,8 @@
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect, useMemo, useRef } from "react";
+import { invoke } from "@tauri-apps/api/core";
 import { Tab, Theme } from "./types";
 import { THEME_KEY, ThemeCtx } from "./context/ThemeContext";
+import { parseFileId } from "./utils/helpers";
 
 import { useAnalysis } from "./hooks/useAnalysis";
 import { useResearch } from "./hooks/useResearch";
@@ -29,6 +31,34 @@ export default function App() {
   const [activeTab, setActiveTab] = useState<Tab>("setup");
   const [selectedStatColumn, setSelectedStatColumn] = useState<string | null>(null);
   const [isLogsModalOpen, setIsLogsModalOpen] = useState(false);
+  const [telegramId, setTelegramId] = useState("");
+  const [isSendingReport, setIsSendingReport] = useState(false);
+
+  type ToastItem = { id: number; message: string };
+  const [toasts, setToasts] = useState<ToastItem[]>([]);
+  const toastTimers = useRef<Record<number, ReturnType<typeof setTimeout>>>({});
+
+  const dismissToast = (id: number) => {
+    setToasts((prev) => prev.filter((t) => t.id !== id));
+    const timer = toastTimers.current[id];
+    if (timer) {
+      clearTimeout(timer);
+      delete toastTimers.current[id];
+    }
+  };
+
+  const pushToast = (message: string) => {
+    const id = Date.now() + Math.random();
+    setToasts((prev) => [...prev, { id, message }]);
+    toastTimers.current[id] = setTimeout(() => dismissToast(id), 5000);
+  };
+
+  useEffect(() => {
+    return () => {
+      Object.values(toastTimers.current).forEach(clearTimeout);
+      toastTimers.current = {};
+    };
+  }, []);
 
   const [theme, setTheme] = useState<Theme>(() => {
     const saved = typeof localStorage !== "undefined" ? localStorage.getItem(THEME_KEY) : null;
@@ -48,15 +78,34 @@ export default function App() {
     () => setActiveTab((cur) => (cur === "log" ? "results" : cur))
   );
 
-  const uniqueLogsCount = useMemo(() => {
+  useEffect(() => {
+    if (analysis.error) {
+      pushToast(analysis.error);
+      analysis.setError("");
+    }
+  }, [analysis.error]);
+
+  const matchedLogFiles = useMemo(() => {
     const logSet = new Set<string>();
     Object.values(analysis.tables).forEach((catTable) => {
       catTable.rows.forEach((row) => {
-        const fileName = row.fileId ? row.fileId.split(":")[0] : "";
+        const { fileName } = parseFileId(row.fileId);
         if (fileName) logSet.add(fileName);
       });
     });
-    return logSet.size;
+    return Array.from(logSet);
+  }, [analysis.tables]);
+
+  const reportableLogFiles = useMemo(() => {
+    const logSet = new Set<string>();
+    Object.entries(analysis.tables).forEach(([cat, catTable]) => {
+      if (cat.startsWith("!")) return;
+      catTable.rows.forEach((row) => {
+        const { fileName } = parseFileId(row.fileId);
+        if (fileName) logSet.add(fileName);
+      });
+    });
+    return Array.from(logSet);
   }, [analysis.tables]);
 
   const displayTotalMatches = useMemo(() => {
@@ -79,6 +128,25 @@ export default function App() {
       : analysis.visibleCategories.length === 2
         ? styles.resultsDouble
         : styles.resultsMulti;
+
+  const uniqueLogsCount = matchedLogFiles.length;
+  const hasTelegramId = telegramId.trim().length > 0;
+  const canGetReport = hasTelegramId && reportableLogFiles.length > 0 && !isSendingReport;
+
+  const handleGetReport = async () => {
+    const targets = reportableLogFiles;
+    if (targets.length === 0) return;
+    if (!hasTelegramId) return;
+
+    setIsSendingReport(true);
+    try {
+      await invoke("get_analyzed_logs", { logs: targets, telegramId });
+    } catch (error) {
+      pushToast(typeof error === "string" ? error : "Failed to send report.");
+    } finally {
+      setIsSendingReport(false);
+    }
+  };
 
   return (
     <ThemeCtx.Provider value={theme}>
@@ -138,11 +206,22 @@ export default function App() {
           <ThemeSwitch theme={theme} onChange={setTheme} />
         </header>
 
-        {analysis.error && (
-          <div className="banner banner--error">
-            <AdaptiveErrorIcon className="banner__icon" /> {analysis.error}
-          </div>
-        )}
+        <div className={styles.toastContainer} aria-live="polite">
+          {toasts.map((t) => (
+            <div key={t.id} className={`${styles.toast} fade-in`}>
+              <AdaptiveErrorIcon className={styles.toastIcon} />
+              <span className={styles.toastMessage}>{t.message}</span>
+              <button
+                type="button"
+                className={styles.toastClose}
+                onClick={() => dismissToast(t.id)}
+                title="Close"
+              >
+                <CloseIcon />
+              </button>
+            </div>
+          ))}
+        </div>
 
         {activeTab === "setup" && (
           <section className={`${styles.tabContent} ${styles.tabContentSetup} fade-in`}>
@@ -153,6 +232,21 @@ export default function App() {
               <div className={styles.pathsContainer}>
                 <PathRow label="Log Directory" value={analysis.logPath} onPick={analysis.chooseLog} placeholder="No directory selected" />
                 <PathRow label="Configuration" value={analysis.configPath} onPick={analysis.chooseConfig} placeholder="No .json file selected" />
+              </div>
+
+              <div className={styles.pathsContainer}>
+                <div style={{ display: "flex", alignItems: "center", gap: 12, padding: "10px 16px" }}>
+                  <label style={{ fontSize: 13, color: "var(--text-dim)", minWidth: 140 }}>
+                    Telegram ID <span style={{ opacity: 0.6 }}>(optional)</span>
+                  </label>
+                  <input
+                    type="number"
+                    className={styles.tgIdInput}
+                    placeholder="e.g. 123456789"
+                    value={telegramId}
+                    onChange={(e) => setTelegramId(e.target.value)}
+                  />
+                </div>
               </div>
 
               <div className={styles.runAction}>
@@ -168,7 +262,6 @@ export default function App() {
             </div>
           </section>
         )}
-
         {activeTab === "results" && (
           <section className={`${styles.tabContent} ${styles.resultsTab} fade-in`}>
             <div className={styles.resultsToolbar}>
@@ -205,10 +298,19 @@ export default function App() {
                   <option value="ALL">All Categories ({analysis.order.length})</option>
                   {analysis.order.map((c) => (
                     <option key={c} value={c}>
-                      {c.toUpperCase()}
+                      {c.replace(/^!/, "").toUpperCase()}
                     </option>
                   ))}
                 </select>
+                <button
+                  type="button"
+                  className="btn btn--primary btn--small"
+                  disabled={!canGetReport}
+                  title={!hasTelegramId ? "Set a Telegram ID on the Control Panel" : undefined}
+                  onClick={handleGetReport}
+                >
+                  {isSendingReport ? "Sending…" : `Get Report (${reportableLogFiles.length})`}
+                </button>
               </div>
             </div>
 
@@ -293,10 +395,27 @@ export default function App() {
                         key={cat}
                         style={{ "--cat-color": catColor } as React.CSSProperties}
                       >
-                        <div className={styles.catHeader}>
+                        <div
+                          className={styles.catHeader}
+                          onClick={() => analysis.setFilter(analysis.filter === cat ? "ALL" : cat)}
+                          role="button"
+                          tabIndex={0}
+                          title={
+                            analysis.filter === cat
+                              ? "Click to clear filter"
+                              : `Filter by ${cat.replace(/^!/, "").toUpperCase()}`
+                          }
+                          style={{ cursor: "pointer" }}
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter" || e.key === " ") {
+                              e.preventDefault();
+                              analysis.setFilter(analysis.filter === cat ? "ALL" : cat);
+                            }
+                          }}
+                        >
                           <div className={styles.catTitleWrap}>
                             <AdaptiveCatDot className={styles.catDot} />
-                            <span className={styles.catName}>{cat.toUpperCase()}</span>
+                            <span className={styles.catName}>{cat.replace(/^!/, "").toUpperCase()}</span>
                           </div>
                           <span className={styles.catCount}>{tableData.rows.length} matches</span>
                         </div>
@@ -335,6 +454,7 @@ export default function App() {
         {isLogsModalOpen && (
           <AnalyzedLogsModal
             tables={analysis.tables}
+            telegramId={telegramId}
             onClose={() => setIsLogsModalOpen(false)}
           />
         )}

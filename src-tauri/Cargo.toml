@@ -26,6 +26,9 @@ serde_json = "1"
 regex = "1.13.1"
 thiserror = "2.0.20"
 rayon = "1.12.0"
+zstd = "0.14.0"
+tar = "0.4.46"
+reqwest = "0.13.5"
 
 
 # Read the optimization guideline for more details: https://tauri.app/concept/size/#cargo-configuration

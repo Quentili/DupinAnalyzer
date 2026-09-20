@@ -2,8 +2,8 @@ use std::sync::Mutex;
 
 use crate::{
     analyzer::{analys, research, selected_path},
-    configuration::{load_configuration, CompiledPattern},
-    viewer::open_log_at_line,
+    configuration::{CompiledPattern, load_configuration},
+    viewer::{get_analyzed_logs, open_log_at_line},
 };
 
 mod analyzer;
@@ -14,6 +14,7 @@ mod viewer;
 struct AppState {
     path: Option<String>,
     configs: Vec<CompiledPattern>,
+    client: reqwest::Client,
 }
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
@@ -27,7 +28,8 @@ pub fn run() {
             selected_path,
             load_configuration,
             open_log_at_line,
-            research
+            research,
+            get_analyzed_logs
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
