@@ -10,7 +10,7 @@ import org.springframework.web.bind.annotation.RestController;
 public class HealthCheckController {
 
     @GetMapping("/health")
-    public ResponseEntity<Void> onHealth() {
-        return ResponseEntity.ok().build();
+    public Map<String, Object> health() {
+        return Map.of("ok", LocalDateTime.now());
     }
 }
