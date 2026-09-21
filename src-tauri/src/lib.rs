@@ -1,8 +1,8 @@
 use std::sync::Mutex;
 
 use crate::{
-    analyzer::{analys, research, selected_path},
-    configuration::{CompiledPattern, load_configuration},
+    analyzer::{analys, research, selected_paths},
+    configuration::{load_configuration, CompiledPattern},
     viewer::{get_analyzed_logs, open_log_at_line},
 };
 
@@ -12,7 +12,7 @@ mod viewer;
 
 #[derive(Default)]
 struct AppState {
-    path: Option<String>,
+    paths: Option<Vec<String>>,
     configs: Vec<CompiledPattern>,
     client: reqwest::Client,
 }
@@ -25,7 +25,7 @@ pub fn run() {
         .manage(Mutex::new(AppState::default()))
         .invoke_handler(tauri::generate_handler![
             analys,
-            selected_path,
+            selected_paths,
             load_configuration,
             open_log_at_line,
             research,

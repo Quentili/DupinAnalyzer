@@ -124,8 +124,8 @@ export function VirtualizedTable({ columns, rows, catColor, onRowClick }: Virtua
                                     backgroundColor: hexToRgba(catColor, 0.12),
                                 }}
                                 className={`${styles.rowHover} ${styles.clickableRow}`}
-                                onClick={() => onRowClick(parsedFile.fileName, row.lineIndex)}
-                                title={`Click to open ${parsedFile.fileName} at line ${row.lineIndex + 1}`}
+                                onClick={() => onRowClick(row.fileId, row.lineIndex)}
+                                title={`${parsedFile.filePath}\nClick to open at line ${row.lineIndex + 1}`}
                             >
                                 <td className={styles.catFileId}>{parsedFile.fileName || "log"}</td>
                                 {columns.map((c) => {

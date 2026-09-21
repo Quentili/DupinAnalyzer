@@ -64,9 +64,9 @@ export type LogTab = {
     error: string | null;
 };
 
-
 export type ParsedFileId = {
     fileName: string;
+    filePath: string;
     modTime: number;
     createdTime: number | null;
     raw: string;

@@ -3,7 +3,7 @@ import { Channel, invoke } from "@tauri-apps/api/core";
 import { AnalysEvent, CategoryTable, RowData, Status } from "../types";
 import { parsePayloadItem } from "../utils/helpers";
 
-export const useResearch = (logPath: string | null, onError: (msg: string) => void) => {
+export const useResearch = (logPath: string[], onError: (msg: string) => void) => {
     const [searchQuery, setSearchQuery] = useState("");
     const [searchStatus, setSearchStatus] = useState<Status>("idle");
     const [searchProgress, setSearchProgress] = useState(0);
@@ -44,8 +44,8 @@ export const useResearch = (logPath: string | null, onError: (msg: string) => vo
     }
 
     async function runResearch(query: string) {
-        if (!logPath) {
-            onError("Select a log directory first (Control Panel).");
+        if (logPath.length === 0) {
+            onError("Select at least one log directory first (Control Panel).");
             return;
         }
         const runId = ++searchRunId.current;

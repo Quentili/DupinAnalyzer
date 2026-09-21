@@ -266,7 +266,7 @@
 
 .resultsMulti {
   grid-template-columns: repeat(2, 1fr);
-  grid-auto-rows: calc(50% - 10px);
+  grid-auto-rows: calc(60%);
 }
 .resultsMulti .cat {
   height: 100%;

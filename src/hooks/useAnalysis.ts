@@ -1,10 +1,10 @@
 import { useState, useRef } from "react";
 import { Channel, invoke } from "@tauri-apps/api/core";
 import { AnalysEvent, CategoryTable, RowData, Status } from "../types";
-import { calculateSummaryStats, formatConfigError, parsePayloadItem, pickCatalog, pickFile } from "../utils/helpers";
+import { calculateSummaryStats, formatConfigError, parsePayloadItem, pickCatalogs, pickFile } from "../utils/helpers";
 
 export const useAnalysis = () => {
-    const [logPath, setLogPath] = useState<string | null>(null);
+    const [logPath, setLogPath] = useState<string[]>([]);
     const [configPath, setConfigPath] = useState<string | null>(null);
     const [status, setStatus] = useState<Status>("idle");
     const [progress, setProgress] = useState<number>(0);
@@ -15,11 +15,23 @@ export const useAnalysis = () => {
 
     const currentFileRef = useRef<string>("");
 
+    async function syncPaths(paths: string[]) {
+        setLogPath(paths);
+        try {
+            await invoke("selected_paths", { paths });
+        } catch (e) {
+            setError(String(e));
+        }
+    }
+
     async function chooseLog() {
-        const path = await pickCatalog();
-        if (!path) return;
-        setLogPath(path);
-        await invoke("selected_path", { path });
+        const picked = await pickCatalogs();
+        if (picked.length === 0) return;
+        await syncPaths(Array.from(new Set([...logPath, ...picked])));
+    }
+
+    async function removeLog(path: string) {
+        await syncPaths(logPath.filter((p) => p !== path));
     }
 
     async function chooseConfig() {
@@ -69,6 +81,7 @@ export const useAnalysis = () => {
 
         setOrder((prev) => [...prev, ...Object.keys(categoryNewRows).filter((c) => !prev.includes(c))]);
     };
+
     async function runAnalysis(onSuccess?: () => void) {
         setTables({});
         setOrder([]);
@@ -102,11 +115,12 @@ export const useAnalysis = () => {
     }
 
     const stats = calculateSummaryStats(tables);
-    const canRun = Boolean(logPath && configPath && status !== "running");
+    const canRun = Boolean(logPath.length > 0 && configPath && status !== "running");
     const visibleCategories = filter === "ALL" ? order : order.filter((c) => c === filter);
 
     return {
         logPath, configPath, status, progress, tables, order, filter, error,
-        stats, canRun, visibleCategories, setFilter, setError, chooseLog, chooseConfig, runAnalysis,
+        stats, canRun, visibleCategories, setFilter, setError,
+        chooseLog, removeLog, chooseConfig, runAnalysis,
     };
 };

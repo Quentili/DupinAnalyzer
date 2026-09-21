@@ -1,6 +1,6 @@
 import { useState, useMemo } from "react";
 import { invoke } from "@tauri-apps/api/core";
-import { parseFileId } from "../../utils/helpers";
+import { basename, dirname, parseFileId } from "../../utils/helpers";
 import { CategoryTable } from "../../types";
 import styles from "./AnalyzedLogsModal.module.css";
 import { AdaptiveSearchIcon } from "../Icons/Icons";
@@ -21,8 +21,8 @@ export function AnalyzedLogsModal({ tables, telegramId, onClose }: AnalyzedLogsM
         const logSet = new Set<string>();
         Object.values(tables).forEach((catTable) => {
             catTable.rows.forEach((row) => {
-                const { fileName } = parseFileId(row.fileId);
-                if (fileName) logSet.add(fileName);
+                const { filePath } = parseFileId(row.fileId);
+                if (filePath) logSet.add(filePath);
             });
         });
         return Array.from(logSet).sort();
@@ -31,31 +31,31 @@ export function AnalyzedLogsModal({ tables, telegramId, onClose }: AnalyzedLogsM
     const filteredLogs = useMemo(() => {
         if (!searchQuery.trim()) return uniqueLogs;
         const query = searchQuery.toLowerCase();
-        return uniqueLogs.filter((fileName) => fileName.toLowerCase().includes(query));
+        return uniqueLogs.filter((filePath) => filePath.toLowerCase().includes(query));
     }, [uniqueLogs, searchQuery]);
 
-    const handleToggle = (fileName: string) => {
+    const handleToggle = (filePath: string) => {
         setSelectedLogs((prev) =>
-            prev.includes(fileName)
-                ? prev.filter((name) => name !== fileName)
-                : [...prev, fileName]
+            prev.includes(filePath)
+                ? prev.filter((p) => p !== filePath)
+                : [...prev, filePath]
         );
     };
 
     const isAllFilteredSelected =
         filteredLogs.length > 0 &&
-        filteredLogs.every((name) => selectedLogs.includes(name));
+        filteredLogs.every((p) => selectedLogs.includes(p));
 
     const handleToggleAll = () => {
         if (isAllFilteredSelected) {
-            setSelectedLogs((prev) => prev.filter((name) => !filteredLogs.includes(name)));
+            setSelectedLogs((prev) => prev.filter((p) => !filteredLogs.includes(p)));
         } else {
             setSelectedLogs((prev) => Array.from(new Set([...prev, ...filteredLogs])));
         }
     };
 
-    const handleGet = async (fileName?: string) => {
-        const targets = fileName ? [fileName] : selectedLogs;
+    const handleGet = async (filePath?: string) => {
+        const targets = filePath ? [filePath] : selectedLogs;
         if (targets.length === 0) return;
         if (!hasTelegramId) return;
 
@@ -124,33 +124,40 @@ export function AnalyzedLogsModal({ tables, telegramId, onClose }: AnalyzedLogsM
                             No log files found matching "{searchQuery}"
                         </div>
                     ) : (
-                        filteredLogs.map((fileName) => (
-                            <div
-                                key={fileName}
-                                className={styles.row}
-                                onClick={() => handleToggle(fileName)}
-                            >
-                                <div className={styles.checkboxLabel}>
-                                    <input
-                                        type="checkbox"
-                                        checked={selectedLogs.includes(fileName)}
-                                        onChange={() => { }}
-                                    />
-                                    <span>{fileName}</span>
-                                </div>
-                                <button
-                                    type="button"
-                                    className="btn btn--secondary btn--small"
-                                    disabled={!hasTelegramId}
-                                    onClick={(e) => {
-                                        e.stopPropagation();
-                                        handleGet(fileName);
-                                    }}
+                        filteredLogs.map((filePath) => {
+                            const dir = dirname(filePath);
+                            return (
+                                <div
+                                    key={filePath}
+                                    className={styles.row}
+                                    onClick={() => handleToggle(filePath)}
+                                    title={filePath}
                                 >
-                                    GET
-                                </button>
-                            </div>
-                        ))
+                                    <div className={styles.checkboxLabel}>
+                                        <input
+                                            type="checkbox"
+                                            checked={selectedLogs.includes(filePath)}
+                                            onChange={() => { }}
+                                        />
+                                        <span>{basename(filePath)}</span>
+                                        {dir && (
+                                            <span style={{ opacity: 0.5, fontSize: 12, marginLeft: 8 }}>{dir}</span>
+                                        )}
+                                    </div>
+                                    <button
+                                        type="button"
+                                        className="btn btn--secondary btn--small"
+                                        disabled={!hasTelegramId}
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            handleGet(filePath);
+                                        }}
+                                    >
+                                        GET
+                                    </button>
+                                </div>
+                            );
+                        })
                     )}
                 </div>
             </div>

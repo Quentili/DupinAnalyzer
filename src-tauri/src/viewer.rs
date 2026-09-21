@@ -1,9 +1,5 @@
 use std::{
-    fs::File,
-    io::{BufRead, BufReader},
-    mem::take,
-    path::Path,
-    sync::Mutex,
+    fs::File, io::{BufRead, BufReader}, mem::take, path::Path, sync::Mutex
 };
 
 use serde::Serialize;
@@ -36,9 +32,6 @@ pub enum ViewerError {
 
     #[error("request error: {0}")]
     Request(#[from] reqwest::Error),
-
-    #[error("dir not found")]
-    DirNotFound,
 }
 
 impl Serialize for ViewerError {
@@ -89,25 +82,20 @@ pub async fn get_analyzed_logs(
     telegram_id: String,
     state: tauri::State<'_, Mutex<AppState>>,
 ) -> Result<(), ViewerError> {
-    let (dir_path, client) = {
+    let client = {
         let app = state.lock().unwrap();
         let client = app.client.clone();
-        let path = match &app.path {
-            Some(path) => path.clone(),
-            None => return Err(ViewerError::DirNotFound),
-        };
 
-        (path, client)
+        client
     };
 
     let encoder = Encoder::new(Vec::new(), 3)?;
     let mut archive = Builder::new(encoder);
 
     for log in logs {
-        let log_path = Path::new(&dir_path).join(&log);
-        let mut f = File::open(&log_path)?;
+            let mut f = File::open(&log)?;
 
-        archive.append_file(log, &mut f)?;
+            archive.append_file(Path::new(&log).file_name().unwrap(), &mut f)?;
     }
 
     let encoder = archive.into_inner()?;

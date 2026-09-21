@@ -53,7 +53,7 @@ pub fn analys(
 ) -> Result<(), String> {
     let (dir_path, configs) = {
         let app = state.lock().unwrap();
-        let path = match &app.path {
+        let path = match &app.paths {
             Some(path) => path.clone(),
             None => return Err("File not found".to_string()),
         };
@@ -76,11 +76,6 @@ pub fn analys(
                 .metadata()
                 .map_err(|e| e.to_string())
                 .and_then(|meta| {
-                    let name = file_path
-                        .file_name()
-                        .and_then(|n| n.to_str())
-                        .ok_or_else(|| "Invalid file name".to_string())?;
-
                     let mod_time = meta
                         .modified()
                         .map_err(|e| e.to_string())?
@@ -88,10 +83,7 @@ pub fn analys(
                         .map_err(|e| e.to_string())?
                         .as_secs();
 
-                    Ok(format!(
-                        "{{{}}}::{{{}}}",
-                        name, mod_time
-                    ))
+                    Ok(format!("{{{}}}::{{{}}}", file_path.display(), mod_time))
                 })
                 .unwrap();
 
@@ -122,21 +114,23 @@ pub fn analys(
     Ok(())
 }
 
-fn collect_log_files(dir_path: &String) -> Result<(Vec<PathBuf>, u64), String> {
+fn collect_log_files(dir_paths: &Vec<String>) -> Result<(Vec<PathBuf>, u64), String> {
     let mut files = Vec::new();
     let mut total_bytes = 0u64;
 
-    for entry in read_dir(dir_path).map_err(|e| e.to_string())? {
-        let entry = entry.map_err(|e| e.to_string())?;
-        let path = entry.path();
-        if path.is_file()
-            && matches!(
-                path.extension().and_then(|e| e.to_str()),
-                Some("txt" | "log")
-            )
-        {
-            total_bytes += entry.metadata().map_err(|e| e.to_string())?.len();
-            files.push(path);
+    for dir_path in dir_paths {
+        for entry in read_dir(dir_path).map_err(|e| e.to_string())? {
+            let entry = entry.map_err(|e| e.to_string())?;
+            let path = entry.path();
+            if path.is_file()
+                && matches!(
+                    path.extension().and_then(|e| e.to_str()),
+                    Some("txt" | "log")
+                )
+            {
+                total_bytes += entry.metadata().map_err(|e| e.to_string())?.len();
+                files.push(path);
+            }
         }
     }
 
@@ -234,7 +228,7 @@ pub fn research(
 ) -> Result<(), String> {
     let dir_path = {
         let app = state.lock().unwrap();
-        let path = match &app.path {
+        let path = match &app.paths {
             Some(path) => path.clone(),
             None => return Err("File not found".to_string()),
         };
@@ -255,10 +249,20 @@ pub fn research(
         let mut last_emit = Instant::now();
 
         for file_path in files_process {
-            let file_name = match file_path.file_name().and_then(|e| e.to_str()) {
-                Some(name) => name.to_string(),
-                None => continue,
-            };
+            let file_name = file_path
+                .metadata()
+                .map_err(|e| e.to_string())
+                .and_then(|meta| {
+                    let mod_time = meta
+                        .modified()
+                        .map_err(|e| e.to_string())?
+                        .duration_since(UNIX_EPOCH)
+                        .map_err(|e| e.to_string())?
+                        .as_secs();
+
+                    Ok(format!("{{{}}}::{{{}}}", file_path.display(), mod_time))
+                })
+                .unwrap();
 
             let f = match File::open(&file_path) {
                 Ok(file) => file,
@@ -337,7 +341,7 @@ pub fn research(
 }
 
 #[tauri::command]
-pub fn selected_path(path: String, state: tauri::State<Mutex<AppState>>) {
+pub fn selected_paths(paths: Vec<String>, state: tauri::State<Mutex<AppState>>) {
     let mut app = state.lock().unwrap();
-    app.path = Some(path);
+    app.paths = Some(paths);
 }

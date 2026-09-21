@@ -15,22 +15,31 @@ export function hexToRgba(hex: string | undefined, alpha: number): string {
     return `rgba(${r}, ${g}, ${b}, ${alpha})`;
 }
 
+const stripBraces = (s: string) => s.replace(/^\{|\}$/g, "").trim();
+
+export function basename(p: string): string {
+    return p.split(/[\\/]/).pop() || p;
+}
+
+export function dirname(p: string): string {
+    const idx = Math.max(p.lastIndexOf("/"), p.lastIndexOf("\\"));
+    return idx > 0 ? p.slice(0, idx) : "";
+}
+
 export function parseFileId(fileId: string): ParsedFileId {
     if (!fileId) {
-        return { fileName: "log", modTime: 0, createdTime: null, raw: "" };
+        return { fileName: "log", filePath: "", modTime: 0, createdTime: null, raw: "" };
     }
 
-    const parts = fileId.split("::");
-    if (parts.length >= 2) {
-        const fileName = parts[0].replace(/^\{|\}$/g, "").trim();
-        const rawMod = parts[1].replace(/^\{|\}$/g, "").trim();
-        const modTime = Number.parseInt(rawMod, 10) || 0;
-
-        return { fileName, modTime, createdTime: null, raw: fileId };
+    const idx = fileId.lastIndexOf("::");
+    if (idx > 0) {
+        const filePath = stripBraces(fileId.slice(0, idx));
+        const modTime = Number.parseInt(stripBraces(fileId.slice(idx + 2)), 10) || 0;
+        return { fileName: basename(filePath), filePath, modTime, createdTime: null, raw: fileId };
     }
 
-    const cleanName = fileId.replace(/^\{|\}$/g, "").trim();
-    return { fileName: cleanName, modTime: 0, createdTime: null, raw: fileId };
+    const filePath = stripBraces(fileId);
+    return { fileName: basename(filePath), filePath, modTime: 0, createdTime: null, raw: fileId };
 }
 
 export function parsePayloadItem(item: string) {
@@ -131,8 +140,10 @@ export async function pickFile(extensions: string[]): Promise<string | null> {
     return ((await open({ multiple: false, directory: false, filters: [{ name: "File", extensions }] })) as string | null) ?? null;
 }
 
-export async function pickCatalog(): Promise<string | null> {
-    return ((await open({ multiple: false, directory: true })) as string | null) ?? null;
+export async function pickCatalogs(): Promise<string[]> {
+    const res = await open({ multiple: true, directory: true });
+    if (!res) return [];
+    return Array.isArray(res) ? res : [res];
 }
 
 export function joinPath(dir: string, fileName: string): string {

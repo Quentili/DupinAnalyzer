@@ -2,33 +2,33 @@
 
 ## What is this?
 
-DupinAnalyzer scans one or more log files against a set of rules defined in a
+DupinAnalyzer scans one or more documents against a set of rules defined in a
 JSON config file. Each rule is a regular expression pattern with named capture
-groups. Every line in every log file that matches a rule's pattern becomes a
+groups. Every line in every document that matches a rule's pattern becomes a
 row in that rule's result category, shown as a table in the Results tab.
 
 ## Why?
 
 Instead of hardcoding "what to look for" in the app, you describe it in a
 config file. This lets you point DupinAnalyzer at completely different kinds
-of logs (auth logs, network logs, application logs, whatever) just by
+of documents (contracts, reports, correspondence, whatever) just by
 swapping the config, no code changes required.
 
 ## How to use it
 
 1. Open Control Panel.
-2. Pick a Log Directory (the folder containing the log files to scan).
+2. Pick a Document Directory (the folder containing the documents to scan).
 3. Pick a Configuration file (a `.json` file following the format below).
 4. Click Start Analysis.
 5. Matches show up per category in the Results tab, with per-column stats
-   (`Unique <COLUMN>`) and a full Analyzed Logs view.
-6. Optionally set a Telegram ID and use Get Report to send the matched log
-   files to a Telegram bot as an archive.
+   (`Unique <COLUMN>`) and a full Analyzed Documents view.
+6. Optionally set a Telegram ID and use Get Report to send the matched
+   documents to a Telegram bot as an archive.
 
 ## Config format
 
 The config is a JSON array of rule objects. Here is a short example, built
-for a simple web server access log:
+for a simple business document:
 
 ```json
 [
@@ -47,7 +47,7 @@ for a simple web server access log:
 ]
 ```
 
-This config expects log lines like:
+This config expects document lines like:
 
 ```
 [2024-01-15 10:23:45] INFO Request from 192.168.1.10 to /api/login
@@ -64,7 +64,7 @@ This config expects log lines like:
 | `color`   | `string`   | Hex color (`#RRGGBB`) used as the category's accent color (dot, border, badge). |
 
 Every matched line becomes one row, with one value per group, tagged with the
-source log file (`fileId`) and shown in a `VirtualizedTable` under that
+source document (`fileId`) and shown in a `VirtualizedTable` under that
 category.
 
 ## The `!` prefix
@@ -87,18 +87,19 @@ config.
 
 - The category still matches, still shows up in Results, still counts toward
   its own match count.
-- But log files that only matched this category (and no other, non `!`
+- But documents that only matched this category (and no other, non `!`
   category) are excluded from:
   - The Get Report button (both its count and the files it actually sends).
-  - It does not affect the "ANALYZED LOGS" total in the stats summary, that
-    number always counts every file that matched any category, `!` or not.
+  - It does not affect the "ANALYZED DOCUMENTS" total in the stats summary,
+    that number always counts every document that matched any category, `!`
+    or not.
 
 Use this when a rule is useful for on screen inspection (e.g. failed login
-attempts) but shouldn't by itself justify pulling a log file into the
+attempts) but shouldn't by itself justify pulling a document into the
 Telegram report, for example noisy or low signal matches.
 
-If a log file matches both an excluded (`!`) category and a normal one, it's
-not excluded. Get Report only skips files whose only matches came from `!`
+If a document matches both an excluded (`!`) category and a normal one, it's
+not excluded. Get Report only skips documents whose only matches came from `!`
 prefixed categories.
 
 ### `!` on a `groups` entry: excluded from the stats summary
@@ -127,17 +128,17 @@ With the config above:
 
 - `request` is a normal category. Its `ip` and `path` columns each get a
   `Unique IP` / `Unique PATH` stat card. Its `time` column is hidden from
-  stats (but still shown in the table). Files matching `request` count
+  stats (but still shown in the table). Documents matching `request` count
   toward Get Report.
 - `!failed_login` is displayed as `FAILED_LOGIN` in the UI (the `!` is
   stripped). Its `username` and `ip` columns get stat cards, `time` does
-  not. Files matched only by this category are left out of Get Report, but
-  if the same file also matched `request`, it's still included.
+  not. Documents matched only by this category are left out of Get Report,
+  but if the same document also matched `request`, it's still included.
 
 ## Quick reference
 
-| Prefix location       | Effect                                                                        | Still shown in Results? | Still counted in "ANALYZED LOGS"? |
+| Prefix location       | Effect                                                                        | Still shown in Results? | Still counted in "ANALYZED DOCUMENTS"? |
 |------------------------|--------------------------------------------------------------------------------|:---:|:---:|
-| `!` on `name`          | File excluded from Get Report (unless it also matched a normal category)      | Yes | Yes |
-| `!` on a `groups` item  | Column excluded from the `statsSummary` stat cards                            | Yes (in table) | n/a |
+| `!` on `name`          | Document excluded from Get Report (unless it also matched a normal category)  | Yes | Yes |
+| `!` on a `groups` item  | Column excluded from the `statsSummary` stat cards                           | Yes (in table) | n/a |
 | No `!`                  | Default behavior, included everywhere                                        | Yes | Yes |

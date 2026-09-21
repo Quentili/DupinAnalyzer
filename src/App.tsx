@@ -73,7 +73,6 @@ export default function App() {
   const analysis = useAnalysis();
   const research = useResearch(analysis.logPath, analysis.setError);
   const tabs = useLogTabs(
-    analysis.logPath,
     () => setActiveTab("log"),
     () => setActiveTab((cur) => (cur === "log" ? "results" : cur))
   );
@@ -89,8 +88,8 @@ export default function App() {
     const logSet = new Set<string>();
     Object.values(analysis.tables).forEach((catTable) => {
       catTable.rows.forEach((row) => {
-        const { fileName } = parseFileId(row.fileId);
-        if (fileName) logSet.add(fileName);
+        const { filePath } = parseFileId(row.fileId);
+        if (filePath) logSet.add(filePath);
       });
     });
     return Array.from(logSet);
@@ -101,8 +100,8 @@ export default function App() {
     Object.entries(analysis.tables).forEach(([cat, catTable]) => {
       if (cat.startsWith("!")) return;
       catTable.rows.forEach((row) => {
-        const { fileName } = parseFileId(row.fileId);
-        if (fileName) logSet.add(fileName);
+        const { filePath } = parseFileId(row.fileId);
+        if (filePath) logSet.add(filePath);
       });
     });
     return Array.from(logSet);
@@ -140,6 +139,8 @@ export default function App() {
 
     setIsSendingReport(true);
     try {
+      console.log(targets);
+      
       await invoke("get_analyzed_logs", { logs: targets, telegramId });
     } catch (error) {
       pushToast(typeof error === "string" ? error : "Failed to send report.");
@@ -176,30 +177,33 @@ export default function App() {
                 Results {displayTotalMatches > 0 && <span className={styles.tabBadge}>{displayTotalMatches}</span>}
               </button>
 
-              {tabs.logTabs.map((t) => (
-                <button
-                  key={t.fileId}
-                  className={`${styles.tabBtn} ${styles.tabBtnLog} ${activeTab === "log" && tabs.activeLogFileId === t.fileId ? styles.isActive : ""
-                    }`}
-                  onClick={() => {
-                    tabs.setActiveLogFileId(t.fileId);
-                    setActiveTab("log");
-                  }}
-                  title={t.fileId}
-                >
-                  <span className={styles.tabBtnLabel}>{t.fileId}</span>
-                  <span
-                    className={styles.tabBtnClose}
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      tabs.closeLogTab(t.fileId);
+              {tabs.logTabs.map((t) => {
+                const { fileName, filePath } = parseFileId(t.fileId);
+                return (
+                  <button
+                    key={t.fileId}
+                    className={`${styles.tabBtn} ${styles.tabBtnLog} ${activeTab === "log" && tabs.activeLogFileId === t.fileId ? styles.isActive : ""
+                      }`}
+                    onClick={() => {
+                      tabs.setActiveLogFileId(t.fileId);
+                      setActiveTab("log");
                     }}
-                    title="Close"
+                    title={filePath}
                   >
-                    <CloseIcon />
-                  </span>
-                </button>
-              ))}
+                    <span className={styles.tabBtnLabel}>{fileName}</span>
+                    <span
+                      className={styles.tabBtnClose}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        tabs.closeLogTab(t.fileId);
+                      }}
+                      title="Close"
+                    >
+                      <CloseIcon />
+                    </span>
+                  </button>
+                );
+              })}
             </nav>
           </div>
 
@@ -230,7 +234,14 @@ export default function App() {
               <p className={styles.appTagline}>Select source log files and configuration to begin scanning.</p>
 
               <div className={styles.pathsContainer}>
-                <PathRow label="Log Directory" value={analysis.logPath} onPick={analysis.chooseLog} placeholder="No directory selected" />
+                <PathRow
+                  label="Directories"
+                  value={analysis.logPath}
+                  onPick={analysis.chooseLog}
+                  onRemove={analysis.removeLog}
+                  placeholder="No directories selected"
+                  buttonLabel="Add"
+                />
                 <PathRow label="Configuration" value={analysis.configPath} onPick={analysis.chooseConfig} placeholder="No .json file selected" />
               </div>
 
@@ -320,7 +331,7 @@ export default function App() {
                   className={`${styles.statCard} ${styles.statCardClickable}`}
                   onClick={() => setIsLogsModalOpen(true)}
                 >
-                  <span className={styles.statLabel}>ANALYZED LOGS</span>
+                  <span className={styles.statLabel}>ANALYZED DOCUMENTS</span>
                   <span className={styles.statValue}>{uniqueLogsCount}</span>
                   <span className={styles.statActionHint}>View & GET &rarr;</span>
                 </div>
@@ -447,6 +458,8 @@ export default function App() {
           <StatDetailsModal
             column={selectedStatColumn}
             valuesMap={activeStatData.valuesMap}
+            tables={analysis.tables}
+            onOpenLog={tabs.openRowLog}
             onClose={() => setSelectedStatColumn(null)}
           />
         )}

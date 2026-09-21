@@ -1,12 +1,11 @@
 import { useState, useCallback } from "react";
 import { Channel, invoke } from "@tauri-apps/api/core";
 import { LogTab, ViewerEvent } from "../types";
-import { joinPath } from "../utils/helpers";
+import { parseFileId } from "../utils/helpers";
 
 const PAGE_SIZE = 500;
 
 export const useLogTabs = (
-    logPath: string | null,
     onOpenTab: () => void,
     onCloseAll: () => void
 ) => {
@@ -33,7 +32,7 @@ export const useLogTabs = (
             }
         }
 
-        const filePath = logPath ? joinPath(logPath, fileId) : fileId;
+        const { filePath } = parseFileId(fileId);
 
         const newTab: LogTab = {
             fileId,
