@@ -5,6 +5,7 @@ use crate::{
     configuration::{load_configuration, CompiledPattern},
     viewer::{get_analyzed_logs, open_log_at_line},
 };
+use crate::configuration::fetch_config_names;
 
 mod analyzer;
 mod configuration;
@@ -29,7 +30,9 @@ pub fn run() {
             load_configuration,
             open_log_at_line,
             research,
-            get_analyzed_logs
+            get_analyzed_logs,
+            load_configuration,
+            fetch_config_names
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

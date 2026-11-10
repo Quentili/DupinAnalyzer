@@ -1,11 +1,12 @@
 use regex::Regex;
 use serde::{Deserialize, Serialize};
 use std::{fs::read_to_string, sync::Mutex};
+use std::time::Duration;
 use thiserror::Error;
 
 use crate::AppState;
 
-#[derive(Serialize, Deserialize, Default)]
+#[derive(Serialize, Deserialize, Default, Debug)]
 #[serde(tag = "type", rename_all = "camelCase")]
 struct PatternConfig {
     name: String,
@@ -113,28 +114,61 @@ fn compiled_regex(
     Ok(contents)
 }
 
-#[tauri::command]
-pub fn load_configuration(
-    path: String,
-    state: tauri::State<Mutex<AppState>>,
-) -> Result<(), ConfigurationSyntaxError> {
-    let mut app = state.lock().unwrap();
+const CONFIGS_URL: &str = "https://dupinanalyzer.onrender.com/api/config/configs";
 
-    let contents = read_to_string(&path).map_err(|e| ConfigurationSyntaxError::InvalidSyntax {
+#[derive(Debug, Deserialize)]
+struct RemoteConfig {
+    name: String,
+    patterns: Vec<PatternConfig>,
+}
+
+fn remote_error(title: &str, description: String) -> ConfigurationSyntaxError {
+    ConfigurationSyntaxError::InvalidSyntax {
         index: 0,
-        title: "Configuration File".to_string(),
-        description: format!("Failed to read file '{}': {}", path, e),
-    })?;
+        title: title.to_string(),
+        description,
+    }
+}
 
-    let patterns: Vec<PatternConfig> =
-        serde_json::from_str(&contents).map_err(|e| ConfigurationSyntaxError::InvalidSyntax {
-            index: 0,
-            title: "JSON Format".to_string(),
-            description: format!("JSON parsing failed: {}", e),
-        })?;
+async fn fetch_remote_configs() -> Result<Vec<RemoteConfig>, ConfigurationSyntaxError> {
+    let client = reqwest::Client::builder()
+        .timeout(Duration::from_secs(120))
+        .build()
+        .map_err(|e| remote_error("HTTP Client", e.to_string()))?;
 
+    client
+        .get(CONFIGS_URL)
+        .send()
+        .await
+        .and_then(|r| r.error_for_status())
+        .map_err(|e| remote_error("Configuration Server", format!("Request failed: {}", e)))?
+        .json::<Vec<RemoteConfig>>()
+        .await
+        .map_err(|e| remote_error("JSON Format", format!("JSON parsing failed: {}", e)))
+}
+
+#[tauri::command]
+pub async fn fetch_config_names() -> Result<Vec<String>, ConfigurationSyntaxError> {
+    Ok(fetch_remote_configs().await?.into_iter().map(|c| c.name).collect())
+}
+
+#[tauri::command]
+pub async fn load_configuration(
+    name: String,
+    state: tauri::State<'_, Mutex<AppState>>,
+) -> Result<(), ConfigurationSyntaxError> {
+    let remote = fetch_remote_configs()
+        .await?
+        .into_iter()
+        .find(|c| c.name == name)
+        .ok_or_else(|| remote_error("Configuration", format!("Config '{}' not found", name)))?;
+
+    let patterns = remote.patterns;
     validation_config(&patterns)?;
-    app.configs = compiled_regex(&patterns)?;
+    let compiled = compiled_regex(&patterns)?;
+
+    let mut app = state.lock().unwrap();
+    app.configs = compiled;
 
     Ok(())
 }
